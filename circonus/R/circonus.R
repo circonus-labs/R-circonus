@@ -20,6 +20,7 @@ circonus.fetch_numeric <-
 function(obj, checkid, metric, start, end, period, type = '',
                                    verbose = FALSE)
 {
+  epoch <- ISOdatetime(1970,1,1,0,0,0)
   if ( ! is.numeric(start) ) start <- as.numeric(as.POSIXlt(start))
   if ( ! is.numeric(end) ) end <- as.numeric(as.POSIXlt(end))
   metric_encoded <- URLencode(metric, reserved = TRUE)
@@ -33,19 +34,39 @@ function(obj, checkid, metric, start, end, period, type = '',
   b = rjson::fromJSON(a)
   if(! is.list(b$data))
     stop(b$message)
-  if ( type == '' ) type <- expression(x[[2]])
-  else if (type == 'count') type <- expression(x[[2]]$count)
-  else if (type == 'value') type <- expression(x[[2]]$value)
-  else if (type == 'derive') type <- expression(x[[2]]$derive)
-  else if (type == 'counter') type <- expression(x[[2]]$counter)
-  else if (type == 'stddev') type <- expression(x[[2]]$stddev)
-  else if (type == 'derive_stddev') type <- expression(x[[2]]$derive_stddev)
-  else if (type == 'counter_stddev') type <- expression(x[[2]]$counter_stddev)
-  lapply(b$data, function(x) {
-    if(is.null(x[[2]]))
-      val <- NA
-    else
-      val <- eval(type)
-    c(x[[1]], val)
-  })
+
+  extract_column <- function(d, type) {
+    unlist(lapply(b$data, function(x) {
+      if(is.null(x[[2]]$count) || x[[2]]$count == 0)
+        val <- NA
+      else
+        val <- eval(type)
+      val
+    }))
+  }
+
+  names <- c('count','value','derivative','counter','stddev','derivative_stddev','counter_stddev')
+  if(length(which(names==type)) == 1)
+    names <- c(type)
+
+  val <- c()
+  val$whence <- epoch + unlist(lapply(b$data, function(x) x[[1]]));
+
+  for(name in names) {
+    if (name == 'count')
+      val$count <- extract_column(b$data, expression(x[[2]]$count))
+    else if (name == 'value')
+      val$value <- extract_column(b$data, expression(x[[2]]$value))
+    else if (name == 'derivative')
+      val$derivative <- extract_column(b$data, expression(x[[2]]$derivative))
+    else if (name == 'counter')
+      val$counter <- extract_column(b$data, expression(x[[2]]$counter))
+    else if (name == 'stddev')
+      val$stddev <- extract_column(b$data, expression(x[[2]]$stddev))
+    else if (name == 'derivative_stddev')
+      val$derivative_stddev <- extract_column(b$data, expression(x[[2]]$derivative_stddev))
+    else if (name == 'counter_stddev')
+      val$counter_stddev <- extract_column(b$data, expression(x[[2]]$counter_stddev))
+  }
+  val
 }
