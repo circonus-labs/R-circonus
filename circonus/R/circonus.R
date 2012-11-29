@@ -17,7 +17,7 @@ function(apikey, ...)
 }
 
 circonus.fetch_numeric <-
-function(obj, checkid, metric, start, end, period, type = '',
+function(obj, checkid, metric, start, end, period, type = '', na.rm = FALSE,
                                    verbose = FALSE)
 {
   epoch <- ISOdatetime(1970,1,1,0,0,0)
@@ -67,6 +67,17 @@ function(obj, checkid, metric, start, end, period, type = '',
       val$derivative_stddev <- extract_column(b$data, expression(x[[2]]$derivative_stddev))
     else if (name == 'counter_stddev')
       val$counter_stddev <- extract_column(b$data, expression(x[[2]]$counter_stddev))
+  }
+  if(na.rm) {
+    z <- val$count * 0
+    val$whence <- na.omit(val$whence + z)
+    val$count <- na.omit(val$count)
+    val$value <- na.omit(val$value)
+    val$derivative <- na.omit(val$derivative)
+    val$counter <- na.omit(val$counter)
+    val$stddev <- na.omit(val$stddev)
+    val$derivative_stddev <- na.omit(val$derivative_stddev)
+    val$counter_stddev <- na.omit(val$counter_stddev)
   }
   val
 }
