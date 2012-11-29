@@ -1,0 +1,6 @@
+S3method(circonus,default)
+S3method(circonus,fetch_numeric)
+importFrom(RCurl, getCurlHandle, curlSetOpt, getURL)
+import(rjson)
+export(circonus.default)
+export(circonus.fetch_numeric)
