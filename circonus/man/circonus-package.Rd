@@ -13,8 +13,6 @@ Date: \tab 2012-11-28\cr
 License: \tab BSD\cr
 }
 
-api <- circonus.default('<CIRCONUS_API_TOKEN>')
-data <- api.fetch_numeric(1234,'metric_name','1997-04-01','1997-05-01', 1800, type="counter")
 }
 \author{
 Theo Schlossnagle <theo.schlossnagle@circonus.com>
@@ -22,13 +20,23 @@ Theo Schlossnagle <theo.schlossnagle@circonus.com>
 Maintainer: <support@circonus.com>
 }
 \references{
-~~ Literature or other references for background information ~~
 }
 \keyword{ package }
 \seealso{
-~~ Optional links to other man pages, e.g. ~~
-~~ \code{\link[<pkg>:<pkg>-package]{<pkg>}} ~~
 }
 \examples{
-~~ simple examples of the most important functions ~~
+
+> require(circonus)
+Loading required package: circonus
+
+> api <- circonus.default('1b5ecf6c-ee1c-453d-8099-9445d7a84f66')
+> checkid <- 1
+> metric_name <- 'transactions'
+> period <- 300 # (seconds)
+> cdata <- circonus.fetch_numeric(api, checkid, metric_name,
+                                  '2011-01-01', '2011-04-01', period)
+
+> quantile(na.omit(data$counter), probs=c(0.95))
+     95% 
+209.2887 
 }
