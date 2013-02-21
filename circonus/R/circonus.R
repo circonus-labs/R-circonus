@@ -30,7 +30,7 @@ function(obj, checkid, metric, start, end, period, type = '', na.rm = FALSE,
                "end=", end, "&",
                "period=", period,
                sep = "")
-  a = getURL(url, curl=obj$curl, verbose = verbose)
+  a = getURL(url, curl=obj$curl, verbose = verbose, ssl.verifypeer = FALSE)
   b = rjson::fromJSON(a)
   if(! is.list(b$data))
     stop(b$message)
