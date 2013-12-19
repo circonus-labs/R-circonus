@@ -1,8 +1,8 @@
 Package: circonus
 Type: Package
 Title: Imports data from Circonus
-Version: 1.1
-Date: 2012-11-28
+Version: 1.2
+Date: 2013-12-19
 Author: Theo Schlossnagle <theo.schlossnagle@circonus.com>
 Maintainer: <support@circonus.com>
 Description: Uses the Circonus public API via access tokens to pull data.

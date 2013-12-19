@@ -1,5 +1,6 @@
 circonus <-
 function(obj, ...) UseMethod("circonus")
+
 circonus.default <-
 function(apikey, ...)
 {
@@ -16,11 +17,10 @@ function(apikey, ...)
   obj
 }
 
-circonus.fetch_numeric <-
-function(obj, checkid, metric, start, end, period, type = '', na.rm = FALSE,
+circonus.fetch_generic <-
+function(obj, checkid, metric, start, end, period, circonus_type = 'numeric', na.rm = FALSE,
                                    verbose = FALSE)
 {
-  epoch <- ISOdatetime(1970,1,1,0,0,0)
   if ( ! is.numeric(start) ) start <- as.numeric(as.POSIXlt(start))
   if ( ! is.numeric(end) ) end <- as.numeric(as.POSIXlt(end))
   metric_encoded <- URLencode(metric, reserved = TRUE)
@@ -28,13 +28,40 @@ function(obj, checkid, metric, start, end, period, type = '', na.rm = FALSE,
                checkid, "_", metric_encoded, "?",
                "start=", start, "&",
                "end=", end, "&",
+               "type=", circonus_type, "&",
                "period=", period,
                sep = "")
   a = getURL(url, curl=obj$curl, verbose = verbose, ssl.verifypeer = FALSE)
   b = rjson::fromJSON(a)
   if(! is.list(b$data))
     stop(b$message)
+  b
+}
 
+circonus.fetch_histogram <- 
+function(obj, checkid, metric, start, end, period, verbose = FALSE)
+{
+  epoch <- ISOdatetime(1970,1,1,0,0,0)
+  b <- circonus.fetch_generic(obj,checkid,metric,start,end,period,
+                              circonus_type='histogram',verbose=verbose)
+  tshist <- c()
+  tshist$whence <- lapply(b$data, function(x) unlist(x[1]))
+  tshist$distributions <- lapply(b$data, function(x) {
+    hist <- c()
+    hist$bin <- unlist(lapply(names(x[[3]]), as.numeric))
+    hist$frequency <- unlist(t(x[[3]]))
+    data.frame(hist)
+  })
+  tshist
+}
+
+circonus.fetch_numeric <- 
+function(obj, checkid, metric, start, end, period, type = '', na.rm = FALSE,
+                                   verbose = FALSE)
+{
+  epoch <- ISOdatetime(1970,1,1,0,0,0)
+  b <- circonus.fetch_generic(obj,checkid,metric,start,end,period,
+                              circonus_type='numeric',verbose=verbose)
   extract_column <- function(d, type) {
     unlist(lapply(b$data, function(x) {
       if(is.null(x[[2]]$count) || x[[2]]$count == 0)
@@ -80,4 +107,29 @@ function(obj, checkid, metric, start, end, period, type = '', na.rm = FALSE,
     val$counter_stddev <- na.omit(val$counter_stddev)
   }
   val
+}
+
+circonus.nntagg <-
+function(x,y)
+{
+  if(is.na(x$count)) {
+    a <- y
+  }
+  else if(is.na(y$count)) {
+    a <- x
+  }
+  else {
+  	aggsd <- function(m,sd,w) {
+  	  sqrt(weighted.mean(sd^2, w) + (prod(w)/(sum(w)^2))*((diff(m))^2))
+  	}
+    a <- c()
+    a$count <- x$count + y$count
+    a$value <- weighted.mean(c(x$value, y$value), c(x$count, y$count))
+    a$derivative <- weighted.mean(c(x$derivative, y$derivative), c(ifelse(is.na(x$derivative),0,1),ifelse(is.na(y$derivative),0,1)))
+    a$counter <- weighted.mean(c(x$counter, y$counter), c(ifelse(is.na(x$counter),0,1),ifelse(is.na(y$counter),0,1)))
+    a$stddev <- aggsd(c(x$value, y$value), c(x$stddev, y$stddev), c(x$count, y$count))
+    a$derivative_stddev <- aggsd(c(x$derivative, y$derivative), c(x$derivative_stddev, y$derivative_stddev), c(1,1))
+    a$counter_stddev <- aggsd(c(x$counter, y$counter), c(x$counter_stddev, y$counter_stddev), c(1,1))
+  }
+  a
 }
